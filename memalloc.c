@@ -86,6 +86,17 @@ void* getNextBlock(void* bk)
 		return (void *) (bk + getBlockSize(bk));
 }
 
+void* getPrevBlock(void* bk)
+{
+	if((uintptr_t)bk == progEnd)//if first block
+	{
+		return NULL;
+	}
+
+	int prevBlockSize = (uintptr_t)(bk+ PREV_SIZE_OFFSET);
+	return (void*) (bk - prevBlockSize);
+}
+
 
 void print_BlockString(void* bk)
 {
