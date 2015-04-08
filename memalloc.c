@@ -20,7 +20,7 @@ tagging scheme
 	-5 			prevBlockSize unsigned int (4 bytes)
 */
 
-#define NAX_BLOCK_SIZE 128000 //bytes 128kb
+#define MAX_BLOCK_SIZE 128000 //bytes 128kb
 
 //boundary tag scheme
 #define SIZE_OFFSET 1
@@ -37,14 +37,14 @@ extern char *my_malloc_error;
 int init  = FALSE;
 unsigned long int topBlockSize = 0;
 unsigned int totalNumBytesAlloc = 0;
-unsigned int totalFreeSpace = NAX_TOP_BLOCK_SIZE;
-unsigned int largestContFreeSpace = NAX_TOP_BLOCK_SIZE;
+unsigned int totalFreeSpace = MAX_BLOCK_SIZE;
+unsigned int largestContFreeSpace = MAX_BLOCK_SIZE;
 unsigned int numBlocks = 1;
 unsigned int numFreeBlocks = 1;
 
 unsigned int progBreak = 0;
 unsigned int progEnd = 0;
-void* headFreeBlock = NUll;
+void* headFreeBlock = NULL;
 
 //policy
 #define FIRST_FIT 0 
@@ -63,9 +63,9 @@ int getBlockSize(void* bk)
 
 void print_BlockString(void* bk)
 {
-	printf("___---___BLOCKSTRING___---___\n");
-	printf("Addr: [%d]\n", bk);
-	printf("isFree")
+	printf("\n___---___BLOCKSTRING___---___\n");
+	printf("Addr: [%p]\n", bk);
+	//printf("isFree")
 }
 
 
@@ -89,7 +89,7 @@ void *my_malloc(int size)
 void my_free(void *ptr);
 
 //Specifies the memory allocation policy
-void my_mallopt(int pol);
+void my_mallopt(int pol)
 {
 	if (pol != 0)
 		policy = 1;
@@ -105,4 +105,9 @@ void my_mallinfo()
 	//total free space
 	//largest contiguous free space
 	//other
+}
+
+int main()
+{
+	//testing
 }
