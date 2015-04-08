@@ -111,12 +111,19 @@ void* getPrevFreeBlock(void* bk)
 	return *(void**) (bk + PREV_FREE_BLOCK_OFFSET);
 }
 
-
 void print_BlockString(void* bk)
 {
+	int f;
 	printf("\n___---___BLOCKSTRING___---___\n");
-	printf("Addr: [%p]\n", bk);
-	//printf("isFree")
+	printf("Addr:\t[%p]\n", bk);
+	printf("isFree:\t[%d]\n",f = getIsFree(bk));
+	printf("nextB:\t[%lu]\n", (uintptr_t)getNextBlock(bk));
+	printf("prevB:\t[%lu]\n", (uintptr_t)getPrevBlock(bk));
+	if( f != 0)
+	{
+		printf("nextFB:\t[%lu]\n", (uintptr_t)getNextFreeBlock(bk));
+		printf("prevFB:\t[%lu]\n", (uintptr_t)getPrevFreeBlock(bk));
+	}
 }
 
 
