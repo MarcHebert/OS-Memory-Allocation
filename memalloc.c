@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>//for print debugger statements
+#include <stdint.h>// int pointer type
 
 /*block structure
 
@@ -18,7 +19,7 @@ tagging scheme
  blckaddr	isFree (1 if free, 0 otherwise) char (1 byte)
 	-1 			isPrevFree char	(1 byte)
 	-5 			prevBlockSize unsigned int (4 bytes)
-*/
+*/	
 
 #define MAX_BLOCK_SIZE 128000 //bytes 128kb
 
@@ -30,7 +31,14 @@ tagging scheme
 #define TAG_SIZE 10
 
 //constants, bounds, bookkeeping etc.
-extern char *my_malloc_error;
+
+	//error handling
+	extern char *my_malloc_error;
+
+	/*key
+		P = pointer arithmetic
+	*/
+
 #define TRUE 1
 #define FALSE 0
 
@@ -52,12 +60,30 @@ void* headFreeBlock = NULL;
 int policy = FIRST_FIT;// default is first fit
 
 //accessor functions
-
-
-
 int getBlockSize(void* bk)
 {
 	return *(int*) (bk + SIZE_OFFSET);
+}
+
+int getIsFree(void* bk)
+{
+	return *(int*) (bk);
+}
+
+void* getNextBlock(void* bk)
+{
+	//errorhandling
+	int nextBlock = (uintptr_t)bk + getBlockSize(bk);
+	if (nextBlock >=  sbrk(0))
+	{
+		if(nextBlock > sbrk(0))
+		{
+			//*my_malloc_error = 'P';
+		}
+		return NULL;
+	}
+	else
+		return (void *) (bk + getBlockSize(bk));
 }
 
 
@@ -110,4 +136,7 @@ void my_mallinfo()
 int main()
 {
 	//testing
+	void* p;
+	//printf("Size of void pointer: %d \n", sizeof(p));
+	return 0;
 }
