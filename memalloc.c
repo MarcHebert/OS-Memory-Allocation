@@ -30,6 +30,10 @@ tagging scheme
 #define PREV_FREE_OFFSET -1
 #define TAG_SIZE 10
 
+//specific to free blocks
+#define NEXT_FREE_BLOCK_OFFSET	5
+#define PREV_FREE_BLOCK_OFFSET 9	
+
 //constants, bounds, bookkeeping etc.
 
 	//error handling
@@ -95,6 +99,16 @@ void* getPrevBlock(void* bk)
 
 	int prevBlockSize = (uintptr_t)(bk+ PREV_SIZE_OFFSET);
 	return (void*) (bk - prevBlockSize);
+}
+
+void* getNextFreeBlock(void* bk)
+{
+	return *(void**) (bk + NEXT_FREE_BLOCK_OFFSET);
+}
+
+void* getPrevFreeBlock(void* bk)
+{
+	return *(void**) (bk + PREV_FREE_BLOCK_OFFSET);
 }
 
 
