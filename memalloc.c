@@ -30,10 +30,11 @@ tagging scheme
 #define PREV_SIZE_OFFSET -1 * (PTR_SIZE)
 #define PREV_FREE_OFFSET -2 * (PTR_SIZE) 
 #define TAG_SIZE 4 * (PTR_SIZE)
+#define BLOCK_CONTENT 2 * (PTR_SIZE)	
 
 //specific to free blocks
-#define NEXT_FREE_BLOCK_OFFSET	2*(PTR_SIZE)
-#define PREV_FREE_BLOCK_OFFSET  3*(PTR_SIZE)	
+#define NEXT_FREE_BLOCK_OFFSET	2 * (PTR_SIZE)
+#define PREV_FREE_BLOCK_OFFSET  3 * (PTR_SIZE)	
 
 //constants, bounds, bookkeeping etc.
 
@@ -129,13 +130,35 @@ void print_BlockString(void* bk)
 
 void* firstFit(int size)
 {
+	size = size + TAG_SIZE;
 	void* tmp = freeBlockHead;
 	while(tmp != NULL)
 	{
-		if(size <= getBlockSize(tmp) - TAG_SIZE)
+		if(size <= getBlockSize(tmp))
 			return tmp;
 		tmp = getNextFreeBlock(tmp);
 	}
+	return NULL;
+}
+
+void* bestFit(int size)
+{
+	size = size + TAG_SIZE;
+	void* bestBlock = NULL;
+	int bestSize = MAX_BLOCK_SIZE - TAG_SIZE;
+	int tmpSize = 0 ;
+	void* tmp = freeBlockHead;
+	while(tmp != NULL)
+	{
+		tmpSize =  getBlockSize(tmp);
+		if(tmpSize<bestSize && size<=tmpSize)
+		{
+			bestSize = tmpSize;
+			bestBlock = tmp;
+		}
+		tmp = getNextFreeBlock(tmp);
+	}
+	return bestBlock;
 }
 
 //accessor functions
