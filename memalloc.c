@@ -9,30 +9,31 @@
 
 if free block
 	[
-	+9		prevFreeBlock unsigned int (4 bytes)
-	+5 		nextFreeBlock unsigned int (4 bytes)
+	+3(PTR_SIZE)		prevFreeBlock unsigned int (4 bytes)
+	+2(PTR_SIZE)		nextFreeBlock unsigned int (4 bytes)
 	]
 else
-	+5		main content
+	+2(PTR_SIZE)		main content
 tagging scheme
-	+1		blockSize unsigned int (4 bytes)
- blckaddr	isFree (1 if free, 0 otherwise) char (1 byte)
-	-1 			isPrevFree char	(1 byte)
-	-5 			prevBlockSize unsigned int (4 bytes)
+	+1(PTR_SIZE)		blockSize unsigned int (4 bytes)
+ blckaddr				isFree (1 if free, 0 otherwise) char (1 byte)
+	-1(PTR_SIZE)		isPrevFree char	(1 byte)
+	-2(PTR_SIZE)		prevBlockSize unsigned int (4 bytes)
 */	
 
 #define MAX_BLOCK_SIZE 128000 //bytes 128kb
-
+#define PTR_SIZE 8
+ 
 //boundary tag scheme
-#define SIZE_OFFSET 1
-#define FREE_OFFSET 0
-#define PREV_SIZE_OFFSET -5
-#define PREV_FREE_OFFSET -1
-#define TAG_SIZE 10
+#define SIZE_OFFSET 1 * (PTR_SIZE)
+#define FREE_OFFSET 0 * (PTR_SIZE)
+#define PREV_SIZE_OFFSET -1 * (PTR_SIZE)
+#define PREV_FREE_OFFSET -2 * (PTR_SIZE) 
+#define TAG_SIZE 4 * (PTR_SIZE)
 
 //specific to free blocks
-#define NEXT_FREE_BLOCK_OFFSET	5
-#define PREV_FREE_BLOCK_OFFSET 9	
+#define NEXT_FREE_BLOCK_OFFSET	2*(PTR_SIZE)
+#define PREV_FREE_BLOCK_OFFSET  3*(PTR_SIZE)	
 
 //constants, bounds, bookkeeping etc.
 
@@ -63,7 +64,7 @@ void* headFreeBlock = NULL;
 #define BEST_FIT 1
 int policy = FIRST_FIT;// default is first fit
 
-//accessor functions
+//getter functions
 int getBlockSize(void* bk)
 {
 	return *(int*) (bk + SIZE_OFFSET);
@@ -126,6 +127,33 @@ void print_BlockString(void* bk)
 	}
 }
 
+//accessor functions
+
+void setBlockSize(void* bk, int size)//TODO BOOK KEEPING
+{
+	*(int*)(bk + SIZE_OFFSET) = size;
+	//TODO handle bounds and block collision etc.
+}
+
+void setIsFree(void* bk, int isFree)
+{
+
+	*(char*)(bk+ FREE_OFFSET) = (char)isFree;
+	if(isFree ==1)
+	{
+		//TODO see if possible to merge free blocks
+	}
+}
+
+void setNextFreeBlock(void* bk, void* nbk)
+{
+	*(void**)(bk + NEXT_FREE_BLOCK_OFFSET) = nbk;
+}
+
+void setPrevFreeBlock(void* bk, void* pbk)
+{
+	*(void**)(bk + PREV_FREE_BLOCK_OFFSET) = pbk;
+}
 
 void heap_init()
 {
@@ -169,6 +197,6 @@ int main()
 {
 	//testing
 	void* p;
-	//printf("Size of void pointer: %d \n", sizeof(p));
+	printf("Size of void pointer: %lu \n", sizeof(char*));
 	return 0;
 }
