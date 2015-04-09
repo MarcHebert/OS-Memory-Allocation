@@ -55,9 +55,9 @@ unsigned int largestContFreeSpace = MAX_BLOCK_SIZE;
 unsigned int numBlocks = 1;
 unsigned int numFreeBlocks = 1;
 
-unsigned int progBreak = 0;
-unsigned int progEnd = 0;
-void* headFreeBlock = NULL;
+uintptr_t progBreak = 0;
+uintptr_t progEnd = 0;
+void* freeBlockHead = NULL;
 
 //policy
 #define FIRST_FIT 0 
@@ -127,8 +127,18 @@ void print_BlockString(void* bk)
 	}
 }
 
-//accessor functions
+void* firstFit(int size)
+{
+	void* tmp = freeBlockHead;
+	while(tmp != NULL)
+	{
+		if(size <= getBlockSize(tmp) - TAG_SIZE)
+			return tmp;
+		tmp = getNextFreeBlock(tmp);
+	}
+}
 
+//accessor functions
 void setBlockSize(void* bk, int size)//TODO BOOK KEEPING
 {
 	*(int*)(bk + SIZE_OFFSET) = size;
@@ -155,10 +165,6 @@ void setPrevFreeBlock(void* bk, void* pbk)
 	*(void**)(bk + PREV_FREE_BLOCK_OFFSET) = pbk;
 }
 
-void heap_init()
-{
-
-}
 
 void *my_malloc(int size)
 {
