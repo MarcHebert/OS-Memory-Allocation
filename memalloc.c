@@ -307,6 +307,13 @@ void *my_malloc(int size)
 void my_free(void* ptr)
 {
 	printf("\n___---___MY_FREE___---___\n");
+
+	if(ptr ==NULL)
+	{
+		printf("Freeing nothing, invalid argument\n");
+		return;
+	}
+
 	void* freeB  = (void*) (ptr - (uintptr_t)BLOCK_CONTENT_OFFSET);
 	totalFreeBytes = getBlockSize(freeB) + totalFreeBytes;
 	totalAllocBytes = totalAllocBytes - getBlockSize(freeB);
@@ -346,6 +353,11 @@ void my_free(void* ptr)
 		if(prevFreeB != NULL)
 			setNextFreeBlock(prevFreeB, freeB);
 	}
+	//bookkeeping
+	if(getBlockSize(freeB)> MAX_BLOCK_SIZE)
+	{
+		setBlockSize(freeB, MAX_BLOCK_SIZE);
+	}
 	if( getBlockSize(freeB)> largestContFreeSpace)
 		largestContFreeSpace  = getBlockSize(freeB);
 
@@ -362,8 +374,15 @@ void my_mallopt(int pol)
 }
 
 //Prints memory allocation specifics
-void my_mallinfo()
+void my_mall_info()
 {
+	printf("\n___---___HEAP METADATA___---___\n");
+	printf("Number of used bytes:\t%d\n", totalAllocBytes);
+	printf("Number of free bytes:\t%d\n", totalFreeBytes);
+	printf("Number of blocks:\t%d\n", numBlocks);
+	printf("Number of free blocks:\t%d\n", numFreeBlocks);
+	printf("Size of largest free block:\t%d\n", largestContFreeSpace);
+
 	//print
 	//total number of bytes allocated
 	//total free space
