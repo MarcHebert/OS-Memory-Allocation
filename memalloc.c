@@ -48,8 +48,8 @@ tagging scheme
 int init  = 0;
 unsigned long int topBlockSize = 0;
 unsigned int totalNumBytesAlloc = 0;
-unsigned int totalFreeSpace = MAX_BLOCK_SIZE;
-unsigned int largestContFreeSpace = MAX_BLOCK_SIZE;
+unsigned int totalFreeSpace =0;// or perhaps MAX_BLOCK_SIZE;
+unsigned int largestContFreeSpace =0;//or perhaps MAX_BLOCK_SIZE;
 unsigned int numBlocks = 1;
 unsigned int numFreeBlocks = 1;
 
@@ -112,6 +112,7 @@ void* getPrevFreeBlock(void* bk)
 	//
 }
 
+
 //accessor functions
 void setBlockSize(void* bk, int size)//TODO BOOK KEEPING
 {
@@ -146,7 +147,7 @@ void setPrevFreeBlock(void* bk, void* pbk)
 void print_BlockString(void* bk)
 {
 	int f;
-	printf("\n___---___BLOCKSTRING___---___\n");
+	printf("___---___BLOCKSTRING___---___\n");
 	printf("Addr:\t[%p]\n", bk);
 	printf("isFree:\t[%d]\n",f = getIsFree(bk));
 	printf("nextB:\t[%lu]\n", (uintptr_t)getNextBlock(bk));
@@ -158,7 +159,42 @@ void print_BlockString(void* bk)
 	}
 }
 
-void* getFirstFit(int size)
+void* findNextFreeBlock(void* bk)
+{
+	if(freeBlockHead==NULL)
+		return NULL;//no free blocks
+	void* tmp = freeBlockHead;
+	while(tmp != NULL && tmp < bk)
+		tmp = getNextFreeBlock(tmp);
+	return tmp;
+}
+
+void* findPrevFreeBlock(void* bk)
+{
+	if(freeBlockHead==NULL)
+		return NULL;//no free blocks
+	void* nextTmp = getNextFreeBlock(freeBlockHead);
+	void* tmp = freeBlockHead;
+	while(nextTmp < bk && nextTmp != NULL)
+	{
+		tmp  = nextTmp;
+		nextTmp = getNextFreeBlock(nextTmp);
+	}
+	return tmp;
+}
+
+void combineFreeBlocks(void* bk1, void* bk2)//assuming bk1 < bk2
+{
+	int newSize = getBlockSize(bk1)+getBlockSize(bk2) - TAG_SIZE;
+	setBlockSize(bk1, newSize); //losing a set of tags
+	numFreeBlocks--;
+	numBlocks--;
+	totalFreeSpace = totalFreeSpace + TAG_SIZE;
+	if(newSize > largestContFreeSpace)
+		largestContFreeSpace = newSize;
+}
+
+void* findFirstFit(int size)
 {
 	size = size + TAG_SIZE;
 	void* tmp = freeBlockHead;
@@ -171,7 +207,7 @@ void* getFirstFit(int size)
 	return NULL;
 }
 
-void* getBestFit(int size)
+void* findBestFit(int size)
 {
 	size = size + TAG_SIZE;
 	void* bestBlock = NULL;
@@ -198,9 +234,32 @@ void* newBlockAlloc(int size)
 	setBlockSize(newB, size + TAG_SIZE);
 	numBlocks = numBlocks + 1;
 	totalNumBytesAlloc = totalNumBytesAlloc + size + TAG_SIZE;
-	printf("\nNEWBLOCK");
+	printf("\nNEWBLOCK\n");
 	print_BlockString(newB);
 	return (void*)(newB + BLOCK_CONTENT_OFFSET);
+}
+
+void* defragFreedBlocks(void* fbk)
+{
+	void* tmp = fbk;
+	void* nextB = getNextBlock(fbk);
+	void* prevB = getPrevBlock(fbk);
+	if(prevB != NULL)
+	{
+		if(getIsFree(prevB))
+		{
+			combineFreeBlocks(prevB, tmp);
+			tmp = prevB;
+		}
+	}
+	if(nextB != NULL)
+	{
+		if(getIsFree(nextB))
+		{
+			combineFreeBlocks(tmp, nextB);
+		}
+	}
+	return tmp;
 }
 
 
@@ -216,12 +275,12 @@ void *my_malloc(int size)
 	void* tmp;
 	if(policy == FIRST_FIT)
 	{
-		if((tmp = getFirstFit(size)) == NULL)
+		if((tmp = findFirstFit(size)) == NULL)
 			return newBlockAlloc(size);
 	}
 	else
 	{
-		if((tmp = getBestFit(size))==NULL)
+		if((tmp = findBestFit(size))==NULL)
 			return newBlockAlloc(size);
 	}
 	//NEED TO DEFERAG
@@ -239,7 +298,10 @@ void *my_malloc(int size)
 }
 
 
-void my_free(void *ptr);
+void my_free(void *ptr)
+{
+
+}
 
 //Specifies the memory allocation policy
 void my_mallopt(int pol)
