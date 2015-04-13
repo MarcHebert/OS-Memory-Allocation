@@ -30,7 +30,7 @@ tagging scheme
 #define PREV_SIZE_OFFSET -1 * (PTR_SIZE)
 #define PREV_FREE_OFFSET -2 * (PTR_SIZE) 
 #define TAG_SIZE 4 * (PTR_SIZE)
-#define BLOCK_CONTENT 2 * (PTR_SIZE)	
+#define BLOCK_CONTENT_OFFSET 2 * (PTR_SIZE)	
 
 //specific to free blocks
 #define NEXT_FREE_BLOCK_OFFSET	2 * (PTR_SIZE)
@@ -45,10 +45,7 @@ tagging scheme
 		P = pointer arithmetic
 	*/
 
-#define TRUE 1
-#define FALSE 0
-
-int init  = FALSE;
+int init  = 0;
 unsigned long int topBlockSize = 0;
 unsigned int totalNumBytesAlloc = 0;
 unsigned int totalFreeSpace = MAX_BLOCK_SIZE;
@@ -106,12 +103,45 @@ void* getPrevBlock(void* bk)
 void* getNextFreeBlock(void* bk)
 {
 	return *(void**) (bk + NEXT_FREE_BLOCK_OFFSET);
+	//
 }
 
 void* getPrevFreeBlock(void* bk)
 {
 	return *(void**) (bk + PREV_FREE_BLOCK_OFFSET);
+	//
 }
+
+//accessor functions
+void setBlockSize(void* bk, int size)//TODO BOOK KEEPING
+{
+	*(int*)(bk + SIZE_OFFSET) = (uintptr_t) size;
+	//TODO handle bounds and block collision etc.
+}
+
+void setIsFree(void* bk, int isFree)
+{
+
+	*(int*)(bk+ FREE_OFFSET) = (uintptr_t)isFree;
+	if(isFree ==1)
+	{
+		//TODO see if possible to merge free blocks
+	}
+}
+
+void setNextFreeBlock(void* bk, void* nbk)
+{
+	*(void**)(bk + NEXT_FREE_BLOCK_OFFSET) = nbk;
+	//
+}
+
+void setPrevFreeBlock(void* bk, void* pbk)
+{
+	*(void**)(bk + PREV_FREE_BLOCK_OFFSET) = pbk;
+	//
+}
+
+//helper functions
 
 void print_BlockString(void* bk)
 {
@@ -128,7 +158,7 @@ void print_BlockString(void* bk)
 	}
 }
 
-void* firstFit(int size)
+void* getFirstFit(int size)
 {
 	size = size + TAG_SIZE;
 	void* tmp = freeBlockHead;
@@ -141,7 +171,7 @@ void* firstFit(int size)
 	return NULL;
 }
 
-void* bestFit(int size)
+void* getBestFit(int size)
 {
 	size = size + TAG_SIZE;
 	void* bestBlock = NULL;
@@ -161,36 +191,44 @@ void* bestFit(int size)
 	return bestBlock;
 }
 
-//accessor functions
-void setBlockSize(void* bk, int size)//TODO BOOK KEEPING
+void* newBlockAlloc(int size)
 {
-	*(int*)(bk + SIZE_OFFSET) = size;
-	//TODO handle bounds and block collision etc.
-}
-
-void setIsFree(void* bk, int isFree)
-{
-
-	*(char*)(bk+ FREE_OFFSET) = (char)isFree;
-	if(isFree ==1)
-	{
-		//TODO see if possible to merge free blocks
-	}
-}
-
-void setNextFreeBlock(void* bk, void* nbk)
-{
-	*(void**)(bk + NEXT_FREE_BLOCK_OFFSET) = nbk;
-}
-
-void setPrevFreeBlock(void* bk, void* pbk)
-{
-	*(void**)(bk + PREV_FREE_BLOCK_OFFSET) = pbk;
+	void* newB = (void*) (uintptr_t) sbrk(TAG_SIZE+ size);
+	setIsFree(newB, 0);
+	setBlockSize(newB, size + TAG_SIZE);
+	numBlocks = numBlocks + 1;
+	totalNumBytesAlloc = totalNumBytesAlloc + size + TAG_SIZE;
+	printf("\nNEWBLOCK");
+	print_BlockString(newB);
+	return (void*)(newB + BLOCK_CONTENT_OFFSET);
 }
 
 
+//main functions
 void *my_malloc(int size)
 {
+	if(init == 0)
+	{
+		init = 1;
+		progEnd = sbrk(0);
+	}
+
+	void* tmp;
+	if(policy == FIRST_FIT)
+	{
+		if((tmp = getFirstFit(size)) == NULL)
+			return newBlockAlloc(size);
+	}
+	else
+	{
+		if((tmp = getBestFit(size))==NULL)
+			return newBlockAlloc(size);
+	}
+	//NEED TO DEFERAG
+	setIsFree(tmp, 0);
+	setBlockSize(tmp, size + TAG_SIZE);
+	
+
 	//scan list of free mem blocks
 	//choose one based on policy
 	//if appropriate is found
