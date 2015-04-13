@@ -147,16 +147,18 @@ void setPrevFreeBlock(void* bk, void* pbk)
 void print_BlockString(void* bk)
 {
 	int f;
-	printf("___---___BLOCKSTRING___---___\n");
-	printf("Addr:\t[%p]\n", bk);
-	printf("isFree:\t[%d]\n",f = getIsFree(bk));
-	printf("nextB:\t[%lu]\n", (uintptr_t)getNextBlock(bk));
-	printf("prevB:\t[%lu]\n", (uintptr_t)getPrevBlock(bk));
+	printf("\n___---___BLOCKSTRING___---___\n");
+	printf("Addr[%p]\t", bk);
+	printf("isFree[%d]\t",f = getIsFree(bk));
+	printf("nextB[%lu]\t", (uintptr_t)getNextBlock(bk));
+	printf("prevB[%lu]\t", (uintptr_t)getPrevBlock(bk));
 	if( f != 0)
 	{
-		printf("nextFB:\t[%lu]\n", (uintptr_t)getNextFreeBlock(bk));
-		printf("prevFB:\t[%lu]\n", (uintptr_t)getPrevFreeBlock(bk));
+		printf("nextFB[%lu]\t", (uintptr_t)getNextFreeBlock(bk));
+		printf("prevFB[%lu]\n", (uintptr_t)getPrevFreeBlock(bk));
 	}
+	else
+		printf("\n");
 }
 
 void print_Heap()
@@ -168,13 +170,8 @@ void print_Heap()
 	printf("\n___---___print_Heap___---___\n");
 	while(tmp!= NULL)
 	{
-		tmpFree = getIsFree(tmp);
-		printf("Addr: %p\t f[%d] sz[%d]", tmp, tmpFree, getBlockSize(tmp));
-		if(tmpFree)
-			printf(" nf[%p] pf[%p]\n", getNextFreeBlock(tmp), getPrevFreeBlock(tmp) );
-
-		else
-			printf("\n");
+		print_BlockString(tmp);
+		tmp = getNextBlock(tmp);
 	}
 	printf("___---___End of heap___---___\n");
 }
@@ -412,8 +409,6 @@ void my_mall_info()
 
 int main()
 {
-	//testing
-	void* p;
-	printf("Size of void pointer: %lu \n", sizeof(char*));
-	return 0;
+	my_malloc(400);
+	print_Heap();
 }
