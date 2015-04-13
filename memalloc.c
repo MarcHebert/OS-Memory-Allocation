@@ -159,6 +159,26 @@ void print_BlockString(void* bk)
 	}
 }
 
+void print_Heap()
+{
+	
+	void* tmp = (void*) progEnd;
+	int tmpFree , tmpSize = 0;   
+
+	printf("\n___---___print_Heap___---___\n");
+	while(tmp!= NULL)
+	{
+		tmpFree = getIsFree(tmp);
+		printf("Addr: %p\t f[%d] sz[%d]", tmp, tmpFree, getBlockSize(tmp));
+		if(tmpFree)
+			printf(" nf[%p] pf[%p]\n", getNextFreeBlock(tmp), getPrevFreeBlock(tmp) );
+
+		else
+			printf("\n");
+	}
+	printf("___---___End of heap___---___\n");
+}
+
 void* findNextFreeBlock(void* bk)
 {
 	if(freeBlockHead==NULL)
