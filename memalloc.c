@@ -50,8 +50,8 @@ unsigned long int topBlockSize = 0;
 unsigned int totalAllocBytes = 0;
 unsigned int totalFreeBytes =0;// or perhaps MAX_BLOCK_SIZE;
 unsigned int largestContFreeSpace =0;//or perhaps MAX_BLOCK_SIZE;
-unsigned int numBlocks = 1;
-unsigned int numFreeBlocks = 1;
+unsigned int numBlocks = 0;
+unsigned int numFreeBlocks = 0;
 
 uintptr_t progBreak = 0;
 uintptr_t progEnd = 0;
@@ -96,7 +96,7 @@ void* getPrevBlock(void* bk)
 		return NULL;
 	}
 
-	int prevBlockSize = (uintptr_t)(bk+ PREV_SIZE_OFFSET);
+	int prevBlockSize = *(int*)(bk+ PREV_SIZE_OFFSET);
 	return (void*) (bk - prevBlockSize);
 }
 
@@ -147,14 +147,14 @@ void setPrevFreeBlock(void* bk, void* pbk)
 void print_BlockString(void* bk)
 {
 	int f;
-	printf("\n___---___BLOCKSTRING___---___\n");
-	printf("Addr[%p]\t", bk);
-	printf("isFree[%d]\t",f = getIsFree(bk));
-	printf("nextB[%lu]\t", (uintptr_t)getNextBlock(bk));
-	printf("prevB[%lu]\t", (uintptr_t)getPrevBlock(bk));
+	printf("___---___BLOCKSTRING___---___\n");
+	printf("Addr[%p] ", bk);
+	printf("isFree[%d] ",f = getIsFree(bk));
+	printf("nextB[%lu] ", (uintptr_t)getNextBlock(bk));
+	printf("prevB[%lu] ", (uintptr_t)getPrevBlock(bk));
 	if( f != 0)
 	{
-		printf("nextFB[%lu]\t", (uintptr_t)getNextFreeBlock(bk));
+		printf("nextFB[%lu] ", (uintptr_t)getNextFreeBlock(bk));
 		printf("prevFB[%lu]\n", (uintptr_t)getPrevFreeBlock(bk));
 	}
 	else
@@ -255,8 +255,8 @@ void* newBlockAlloc(int size)
 	setBlockSize(newB, size + TAG_SIZE);
 	numBlocks = numBlocks + 1;
 	totalAllocBytes = totalAllocBytes + size + TAG_SIZE;
-	printf("\nNEWBLOCK\n");
-	print_BlockString(newB);
+	//printf("\nNEWBLOCK\n");
+	//print_BlockString(newB);
 	return (void*)(newB + BLOCK_CONTENT_OFFSET);
 }
 
@@ -411,4 +411,7 @@ int main()
 {
 	my_malloc(400);
 	print_Heap();
+	my_malloc(40);
+	print_Heap();
+	my_mall_info();
 }
