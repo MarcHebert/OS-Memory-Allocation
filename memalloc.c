@@ -96,7 +96,7 @@ void* getPrevBlock(void* bk)
 		return NULL;
 	}
 
-	int prevBlockSize = *(int*)(bk+ PREV_SIZE_OFFSET);
+	int prevBlockSize = (uintptr_t)(bk+ PREV_SIZE_OFFSET);
 	return (void*) (bk - prevBlockSize);
 }
 
@@ -128,6 +128,18 @@ void setIsFree(void* bk, int isFree)
 	{
 		//TODO see if possible to merge free blocks
 	}
+}
+
+void setBlockSizeEndTag(void* bk, int size)
+{
+	uintptr_t blockSize = (uintptr_t) getBlockSize(bk);
+	*(int*)(bk+blockSize + PREV_SIZE_OFFSET) = size;
+}
+
+void setIsFreeEndTag(void* bk, int isFree)
+{
+	uintptr_t blockSize = (uintptr_t) getBlockSize(bk);
+	*(int*)(bk+blockSize + PREV_FREE_OFFSET) = isFree;
 }
 
 void setNextFreeBlock(void* bk, void* nbk)
@@ -205,6 +217,7 @@ void combineFreeBlocks(void* bk1, void* bk2)//assuming bk1 < bk2
 	printf("\n___---___combineFreeBlocks___---___\n");
 	int newSize = getBlockSize(bk1)+getBlockSize(bk2) - TAG_SIZE;
 	setBlockSize(bk1, newSize); //losing a set of tags
+	setBlockSizeEndTag(bk1, newSize);
 	numFreeBlocks--;
 	numBlocks--;
 	totalFreeBytes = totalFreeBytes + TAG_SIZE;
@@ -253,6 +266,8 @@ void* newBlockAlloc(int size)
 	void* newB = (void*) (uintptr_t) sbrk(TAG_SIZE+ size);
 	setIsFree(newB, 0);
 	setBlockSize(newB, size + TAG_SIZE);
+	setBlockSizeEndTag(newB, size + TAG_SIZE);
+	setIsFreeEndTag(newB, 0);
 	numBlocks = numBlocks + 1;
 	totalAllocBytes = totalAllocBytes + size + TAG_SIZE;
 	//printf("\nNEWBLOCK\n");
