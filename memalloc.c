@@ -321,10 +321,38 @@ void *my_malloc(int size)
 		if((tmp = findBestFit(size))==NULL)
 			return newBlockAlloc(size);
 	}
-	//NEED TO DEFERAG
+
 	setIsFree(tmp, 0);
-	setBlockSize(tmp, size + TAG_SIZE);
-	
+
+	//NEED TO DEFRAG
+	uintptr_t oldSize =(uintptr_t) getBlockSize(tmp);
+	//enough space for another block?
+	uintptr_t leftoverSize = oldSize-(size+TAG_SIZE);
+	if(leftoverSize> TAG_SIZE)//tagsize is minimum size of block
+	{
+		//set up leftover block
+		void* leftoverB = (void*)(tmp+oldSize);
+		setBlockSize(leftoverB,leftoverSize);
+		setIsFree(leftoverB, 1);
+		setIsFreeEndTag(leftoverB,1);
+		setBlockSizeEndTag(leftoverB,leftoverSize);
+
+		//setup recycled block
+		setBlockSize(tmp, size + TAG_SIZE);
+		setBlockSizeEndTag(tmp, size+ TAG_SIZE);
+
+		//bookkeeping
+		numBlocks++;
+		totalAllocBytes += size+TAG_SIZE;
+		totalFreeBytes -= size+TAG_SIZE;
+	}
+	else
+	{
+		numFreeBlocks--;
+		totalAllocBytes += oldSize;
+		totalFreeBytes -= oldSize;
+	}
+	setIsFreeEndTag(tmp,0);
 
 	//scan list of free mem blocks
 	//choose one based on policy
