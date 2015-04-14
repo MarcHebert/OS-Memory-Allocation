@@ -39,7 +39,7 @@ tagging scheme
 //constants, bounds, bookkeeping etc.
 
 	//error handling
-	extern char *my_malloc_error;
+	char *my_malloc_error;
 
 	/*key
 		P = pointer arithmetic
@@ -73,6 +73,16 @@ int getIsFree(void* bk)
 	return *(int*) (bk);
 }
 
+int getPrevBlockSize(void* bk)
+{
+	return *(int*) (bk + PREV_SIZE_OFFSET);
+}
+
+int getPrevIsFree(void* bk)
+{
+	return *(int*) (bk + PREV_FREE_OFFSET);
+}
+
 void* getNextBlock(void* bk)
 {
 	//errorhandling
@@ -81,7 +91,7 @@ void* getNextBlock(void* bk)
 	{
 		if(nextBlock > sbrk(0))
 		{
-			//*my_malloc_error = 'P';
+			my_malloc_error = "Pointer arithmetic screwup";
 		}
 		return NULL;
 	}
@@ -96,8 +106,9 @@ void* getPrevBlock(void* bk)
 		return NULL;
 	}
 
-	int prevBlockSize = (uintptr_t)(bk+ PREV_SIZE_OFFSET);
-	return (void*) (bk - prevBlockSize);
+	uintptr_t prevBlockSize = (uintptr_t) getPrevBlockSize(bk);
+	//printf("GETPREVBLOCK previous blocksize:[%lu] \n",prevBlockSize);
+	return (void *) (bk - prevBlockSize);
 }
 
 void* getNextFreeBlock(void* bk)
@@ -112,6 +123,10 @@ void* getPrevFreeBlock(void* bk)
 	//
 }
 
+uintptr_t getHeapSize()
+{
+	return progBreak - progEnd;
+}
 
 //accessor functions
 void setBlockSize(void* bk, int size)//TODO BOOK KEEPING
@@ -160,17 +175,17 @@ void print_BlockString(void* bk)
 {
 	int f;
 	printf("___---___BLOCKSTRING___---___\n");
-	printf("Addr[%p] ", bk);
+	printf("Addr[%lu] ",(uintptr_t) bk);
 	printf("isFree[%d] ",f = getIsFree(bk));
+	printf("size[%d]\n", getBlockSize(bk) );
 	printf("nextB[%lu] ", (uintptr_t)getNextBlock(bk));
 	printf("prevB[%lu] ", (uintptr_t)getPrevBlock(bk));
 	if( f != 0)
 	{
 		printf("nextFB[%lu] ", (uintptr_t)getNextFreeBlock(bk));
-		printf("prevFB[%lu]\n", (uintptr_t)getPrevFreeBlock(bk));
+		printf("prevFB[%lu] ", (uintptr_t)getPrevFreeBlock(bk));
 	}
-	else
-		printf("\n");
+		printf("\n\n");
 }
 
 void print_Heap()
@@ -179,13 +194,14 @@ void print_Heap()
 	void* tmp = (void*) progEnd;
 	int tmpFree , tmpSize = 0;   
 
-	printf("\n___---___print_Heap___---___\n");
+	printf("\n//////print_Heap\\\\\\\\\\\\\n");
+	printf("\nprogEnd[%lu] progBreak[%lu] heapSize[%lu]\n\n",progEnd,progBreak, getHeapSize());
 	while(tmp!= NULL)
 	{
 		print_BlockString(tmp);
 		tmp = getNextBlock(tmp);
 	}
-	printf("___---___End of heap___---___\n");
+	printf("\\\\\\\\\\\\End of heap//////\n");
 }
 
 void* findNextFreeBlock(void* bk)
@@ -227,7 +243,7 @@ void combineFreeBlocks(void* bk1, void* bk2)//assuming bk1 < bk2
 
 void* findFirstFit(int size)
 {
-	printf("\n___---___findFirstFit___---___\n");
+	//printf("\n___---___findFirstFit___---___\n");
 	size = size + TAG_SIZE;
 	void* tmp = freeBlockHead;
 	while(tmp != NULL)
@@ -241,7 +257,7 @@ void* findFirstFit(int size)
 
 void* findBestFit(int size)
 {
-	printf("\n___---___findBestFit___---___\n");
+	//printf("\n___---___findBestFit___---___\n");
 	size = size + TAG_SIZE;
 	void* bestBlock = NULL;
 	int bestSize = MAX_BLOCK_SIZE - TAG_SIZE;
@@ -262,8 +278,16 @@ void* findBestFit(int size)
 
 void* newBlockAlloc(int size)
 {
-	printf("\n___---___newBlockAlloc___---___\n");
-	void* newB = (void*) (uintptr_t) sbrk(TAG_SIZE+ size);
+	//printf("\n___---___newBlockAlloc___---___\n");
+	int new = sbrk(TAG_SIZE+ size);
+	if (new == -1)
+	{
+		my_malloc_error = "Heap size cannot be increased";
+		return NULL;
+	}
+	progBreak+= size + TAG_SIZE;
+
+	void* newB = (void*) (uintptr_t) new;
 	setIsFree(newB, 0);
 	setBlockSize(newB, size + TAG_SIZE);
 	setBlockSizeEndTag(newB, size + TAG_SIZE);
@@ -303,11 +327,12 @@ void* defragFreedBlocks(void* fbk)
 //main functions
 void *my_malloc(int size)
 {
-	printf("\n___---___MY_MALLOC___---___\n");
+	//printf("\n___---___MY_MALLOC___---___\n");
 	if(init == 0)
 	{
 		init = 1;
 		progEnd = sbrk(0);
+		progBreak = progEnd;
 	}
 
 	void* tmp;
@@ -443,6 +468,7 @@ void my_mall_info()
 	printf("Number of free blocks:\t%d\n", numFreeBlocks);
 	printf("Size of largest free block:\t%d\n", largestContFreeSpace);
 
+	printf("\n");
 	//print
 	//total number of bytes allocated
 	//total free space
@@ -452,9 +478,12 @@ void my_mall_info()
 
 int main()
 {
-	my_malloc(400);
+	void* block1 = my_malloc(400);
 	print_Heap();
-	my_malloc(40);
+	void* block2 = my_malloc(40);
+	print_Heap();
+	my_mall_info();
+	my_free(block1);
 	print_Heap();
 	my_mall_info();
 }
