@@ -6,20 +6,24 @@
 #include <stdint.h>// int pointer type
 
 /*block structure
-
 if free block
 	[
-	+3(PTR_SIZE)		prevFreeBlock unsigned int (4 bytes)
-	+2(PTR_SIZE)		nextFreeBlock unsigned int (4 bytes)
+	+3(PTR_SIZE)		prevFreeBlock 
+	+2(PTR_SIZE)		nextFreeBlock 
 	]
 else
-	+2(PTR_SIZE)		main content
+	[
+	+2(PTR_SIZE)		main content(the address the user receives)
+	]
 tagging scheme
-	+1(PTR_SIZE)		blockSize unsigned int (4 bytes)
- blckaddr				isFree (1 if free, 0 otherwise) char (1 byte)
-	-1(PTR_SIZE)		isPrevFree char	(1 byte)
-	-2(PTR_SIZE)		prevBlockSize unsigned int (4 bytes)
-*/	
+	[
+	+1(PTR_SIZE)		blockSize 
+ 	blckaddr		isFree (1 if free, 0 otherwise)
+	-1(PTR_SIZE)		isPrevFree 
+	-2(PTR_SIZE)		prevBlockSize u
+	]
+*/
+	
 
 #define MAX_BLOCK_SIZE 128000 //bytes 128kb
 #define PTR_SIZE 8 //64 bit compatability
@@ -542,12 +546,14 @@ void my_mallopt(int pol)
 //Prints memory allocation specifics
 void my_mall_info()
 {
+
 	printf("\n___---___HEAP METADATA___---___\n");
 	printf("Number of used bytes:\t%d\n", totalAllocBytes);
 	printf("Number of free bytes:\t%d\n", totalFreeBytes);
 	printf("Number of blocks:\t%d\n", numBlocks);
 	printf("Number of free blocks:\t%d\n", numFreeBlocks);
-	printf("Size of largest free block:\t%d\n", getBlockSize(findWorstFit()));
+	if(numFreeBlocks>0)
+		printf("Size of largest free block:\t%d\n", getBlockSize(findWorstFit()));
 
 	printf("\n");
 	//print
@@ -565,6 +571,7 @@ void test1()
 	void* block2 = my_malloc(40);
 	print_Heap();
 	my_mall_info();
+	
 	printf("!!!!!!!!!!!!!!!!!!!!!!!!\nSTAGE1\n!!!!!!!!!!!!!!!!!!!!!!!!\n");
 	my_free(block1);
 	print_Heap();
@@ -573,6 +580,7 @@ void test1()
 	void* block3 = my_malloc(200);
 	print_Heap();
 	my_mall_info();
+
 }
 
 void test2()//test 2way free block merge
@@ -637,7 +645,7 @@ void test5() //test fits and free list element removal
 	my_mall_info();
 }
 
-void test6()
+void test6()//tests maximum size of top free block
 {
 	my_mallopt(BEST_FIT);
 	void* b1 = my_malloc(MAX_BLOCK_SIZE/2 +50);
@@ -652,6 +660,6 @@ void test6()
 
 void main()
 {
-	test6();
+	test1();
 }
 	
