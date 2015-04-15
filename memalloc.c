@@ -159,12 +159,16 @@ void setIsFreeEndTag(void* bk, int isFree)
 
 void setNextFreeBlock(void* bk, void* nbk)
 {
+	if(bk == NULL)
+		return;
 	*(void**)(bk + NEXT_FREE_BLOCK_OFFSET) = nbk;
 	//
 }
 
 void setPrevFreeBlock(void* bk, void* pbk)
 {
+	if(bk == NULL)
+		return;
 	*(void**)(bk + PREV_FREE_BLOCK_OFFSET) = pbk;
 	//
 }
@@ -244,27 +248,33 @@ void combineFreeBlocks(void* bk1, void* bk2)//assuming bk1 < bk2
 
 void* findFirstFit(int size)
 {
+	if(freeBlockHead==NULL)
+		return NULL;
 	//printf("\n___---___findFirstFit___---___\n");
 	size = size + TAG_SIZE;
+	int x =0;
 	void* tmp = freeBlockHead;
-	while(tmp != NULL)
+	while(tmp != NULL&& x<numBlocks)
 	{
 		if(size <= getBlockSize(tmp))
 			return tmp;
 		tmp = getNextFreeBlock(tmp);
+		x++;
 	}
 	return NULL;
 }
 
 void* findBestFit(int size)
 {
+	if(freeBlockHead==NULL)
+		return NULL;
 	//printf("\n___---___findBestFit___---___\n");
 	size = size + TAG_SIZE;
 	void* bestBlock = NULL;
 	int bestSize = MAX_BLOCK_SIZE - TAG_SIZE;
-	int tmpSize = 0 ;
+	int tmpSize, x = 0 ;
 	void* tmp = freeBlockHead;
-	while(tmp != NULL)
+	while(tmp != NULL && x<numBlocks)
 	{
 		tmpSize =  getBlockSize(tmp);
 		if(tmpSize<bestSize && size<=tmpSize)
@@ -273,19 +283,51 @@ void* findBestFit(int size)
 			bestBlock = tmp;
 		}
 		tmp = getNextFreeBlock(tmp);
+		x++;
 	}
 	return bestBlock;
+}
+
+void* findWorstFit()
+{
+	if(freeBlockHead==NULL)
+		return NULL;
+
+	void* worstBlock = NULL;
+	int worstSize = 0;
+	int tmpSize, x = 0;
+	void* tmp = freeBlockHead;
+	while(tmp != NULL && x< numBlocks)
+	{
+		tmpSize =  getBlockSize(tmp);
+		if(tmpSize>worstSize)
+		{
+			worstSize = tmpSize;
+			worstBlock = tmp;
+		}
+		tmp = getNextFreeBlock(tmp);
+		x++;
+	}
+	return worstBlock;
 }
 
 void* newBlockAlloc(int size)
 {
 	//printf("\n___---___newBlockAlloc___---___\n");
+	if(size>MAX_BLOCK_SIZE)
+	{
+		my_malloc_error = "Too large of a block requested";
+		return NULL;
+	}
+
 	int new = sbrk(TAG_SIZE+ size);
 	if (new == -1)
 	{
 		my_malloc_error = "Heap size cannot be increased";
 		return NULL;
 	}
+
+
 	progBreak+= size + TAG_SIZE;
 
 	void* newB = (void*) (uintptr_t) new;
@@ -355,25 +397,35 @@ void *my_malloc(int size)
 	}
 
 	//debug
-	printf("\n\nRECYCLEABLE BLOCK FOUND\n");
-	print_BlockString(tmp);
-	printf("\n");
+	//printf("\n\nRECYCLEABLE BLOCK FOUND\n");
+	//print_BlockString(tmp);
+	//printf("\n");
 
 	//NEED TO DEFRAG
 	uintptr_t wholeSize =(uintptr_t) getBlockSize(tmp);
 	uintptr_t allocedSize =(uintptr_t) size+TAG_SIZE;
 	//enough space for another block?
 	uintptr_t leftoverSize = wholeSize-allocedSize;
-	printf("\n\nLEFTOVERSIZE[%lu]\n",leftoverSize);
+	//printf("\n\nLEFTOVERSIZE[%lu]\n",leftoverSize);
+
+	//store freeblock ptrs
+	void* prevFreeB = NULL; 
+	void* nextFreeB = NULL;
+	prevFreeB = getPrevFreeBlock(tmp);
+	nextFreeB = getNextFreeBlock(tmp);
 	
 	//if size permits, split acquired block into 2
 	if(leftoverSize> TAG_SIZE)//tagsize is minimum size of block
 	{
+		//FREE BLOCK BEING PARTITIONED
+
 		//setup recycled block
 		setBlockSize(tmp, allocedSize);
 		setBlockSizeEndTag(tmp, allocedSize);
 		setIsFree(tmp, 0);
 		setIsFreeEndTag(tmp, 0);
+
+
 
 		//set up leftover block
 		void* leftoverB = (void*)(tmp+allocedSize);
@@ -383,6 +435,11 @@ void *my_malloc(int size)
 		setIsFreeEndTag(leftoverB,1);
 		setBlockSizeEndTag(leftoverB,leftoverSize);
 
+		setNextFreeBlock(prevFreeB, leftoverB);
+		setPrevFreeBlock(nextFreeB, leftoverB);
+		setNextFreeBlock(leftoverB, nextFreeB);
+		setPrevFreeBlock(leftoverB, prevFreeB);
+
 		//bookkeeping
 		numBlocks++;
 		totalAllocBytes += size+TAG_SIZE;
@@ -390,6 +447,9 @@ void *my_malloc(int size)
 	}
 	else
 	{
+		setNextFreeBlock(prevFreeB, nextFreeB);
+		setPrevFreeBlock(nextFreeB, prevFreeB);
+
 		setBlockSize(tmp, wholeSize);
 		setBlockSizeEndTag(tmp, wholeSize);
 		setIsFree(tmp, 0);
@@ -399,6 +459,7 @@ void *my_malloc(int size)
 		totalAllocBytes += wholeSize;
 		totalFreeBytes -= wholeSize;
 	}
+	return (void*)(tmp +BLOCK_CONTENT_OFFSET);
 
 	//scan list of free mem blocks
 	//choose one based on policy
@@ -423,8 +484,8 @@ void my_free(void* ptr)
 	void* freeB  = (void*) (ptr - (uintptr_t)BLOCK_CONTENT_OFFSET);
 	totalFreeBytes = getBlockSize(freeB) + totalFreeBytes;
 	totalAllocBytes = totalAllocBytes - getBlockSize(freeB);
-	printf("Block before free\n");
-	print_BlockString(freeB);
+	//printf("Block before free\n");
+	//print_BlockString(freeB);
 	numFreeBlocks++;
 	setIsFree(freeB,1);
 
@@ -434,24 +495,24 @@ void my_free(void* ptr)
 		freeBlockHead = freeB;
 		setPrevFreeBlock(freeBlockHead, NULL);
 		setNextFreeBlock(freeBlockHead, NULL);
-		printf("First free block - reassigning ptrs:\n");
-		print_BlockString(freeB);
+		//printf("First free block - reassigning ptrs:\n");
+		//print_BlockString(freeB);
 	}
 	else
 	{
 		freeB = defragFreedBlocks(freeB);
 
 		//debug here, TODO print prev and next block
-		printf("Not the first free block - reassigning ptrs:\n");
-		print_BlockString(freeB);
+		//printf("Not the first free block - reassigning ptrs:\n");
+		//print_BlockString(freeB);
 
 	
 		void* nextFreeB = findNextFreeBlock(freeB);
 		void* prevFreeB = findPrevFreeBlock(freeB);
-		printf("ptrs reassigned:\n");
+		//printf("ptrs reassigned:\n");
 		setPrevFreeBlock(freeB, prevFreeB);
 		setNextFreeBlock(freeB, nextFreeB);
-		print_BlockString(freeB);
+		//print_BlockString(freeB);
 
 		//doubly join freed blocks
 		if(nextFreeB != NULL)
@@ -463,9 +524,8 @@ void my_free(void* ptr)
 	if(getBlockSize(freeB)> MAX_BLOCK_SIZE)
 	{
 		setBlockSize(freeB, MAX_BLOCK_SIZE);
+		setBlockSizeEndTag(freeB, MAX_BLOCK_SIZE);
 	}
-	if( getBlockSize(freeB)> largestContFreeSpace)
-		largestContFreeSpace  = getBlockSize(freeB);
 
 
 }
@@ -487,7 +547,7 @@ void my_mall_info()
 	printf("Number of free bytes:\t%d\n", totalFreeBytes);
 	printf("Number of blocks:\t%d\n", numBlocks);
 	printf("Number of free blocks:\t%d\n", numFreeBlocks);
-	printf("Size of largest free block:\t%d\n", largestContFreeSpace);
+	printf("Size of largest free block:\t%d\n", getBlockSize(findWorstFit()));
 
 	printf("\n");
 	//print
@@ -553,12 +613,45 @@ void test3()//test 3way free block merge
 
 void test4()
 {
-	void* b1 = my_malloc(MAX_BLOCK_SIZE);
+	void* b1 = my_malloc(MAX_BLOCK_SIZE+1);
+	my_free(b1);
 	print_Heap();
+}
+
+void test5() //test fits and free list element removal
+{
+	my_mallopt(BEST_FIT);
+	void* block1 = my_malloc(500);
+	void* block2 = my_malloc(500);
+	void* block3 = my_malloc(500);
+	void* block4 = my_malloc(500);
+	void* block5 = my_malloc(500);
+	void* block6 = my_malloc(500);
+	void* block7 = my_malloc(300);
+	my_free(block2);
+	my_free(block7);
+	void* block8 = my_malloc(250);
+	print_Heap();
+	my_free(block4);
+	print_Heap();
+	my_mall_info();
+}
+
+void test6()
+{
+	my_mallopt(BEST_FIT);
+	void* b1 = my_malloc(MAX_BLOCK_SIZE/2 +50);
+	void* b2 = my_malloc(MAX_BLOCK_SIZE/2 +50);
+	void* b3 = my_malloc(MAX_BLOCK_SIZE/2 +50);
+	print_Heap();
+	my_free(b2);
+	my_free(b3);
+	print_Heap();
+	void* b4 = my_malloc(200);
 }
 
 void main()
 {
-	test4();
+	test6();
 }
 	
